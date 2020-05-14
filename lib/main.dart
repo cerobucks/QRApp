@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MyApp());
@@ -12,72 +12,157 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        
         primarySwatch: Colors.blue,
-      
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  final String title;
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  
   final GlobalKey qrKey = GlobalKey(debugLabel: "QR");
   var qrText = "";
   QRViewController controller;
+  List<String> qrList;
+  var pref;
+  bool qrStatus = true;
 
   @override
   void initState() {
-      super.initState();
-     
+    super.initState();
+    getInstance();
   }
 
+  getInstance() async {
+    pref = await SharedPreferences.getInstance();
+    final list = getList();
+    print(list);
+    setState(() {
+      qrList = list != null ? list : new List();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-
-    return Scaffold(
-      appBar: AppBar(
-        
-        title: Text(widget.title),
-      ),
-      body: Column(children: <Widget>[
-        Expanded(
-            flex: 5,
-            child:  QRView(
-              key: qrKey,
-              onQRViewCreated: _onQRViewCreated,
-            )
+    return new WillPopScope(
+        child: Scaffold(
+          body: Column(
+            children: <Widget>[
+              Expanded(
+                flex: 1,
+                child: Image.asset('assets/banner.jpg', fit: BoxFit.fill),
+              ),
+              Expanded(
+                flex: 5,
+                child: qrStatus
+                    ? QRView(
+                        key: qrKey,
+                        onQRViewCreated: _onQRViewCreated,
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: qrList != null ? qrList.length : 0,
+                        itemBuilder: (context, index) {
+                          return Container(
+                            decoration: BoxDecoration(
+                                border: Border(
+                                    bottom: BorderSide(
+                                        color:
+                                            Color.fromRGBO(236, 236, 236, 1)))),
+                            padding:
+                                EdgeInsets.only(left: 5, right: 5, top: index == 0? 0: 10, bottom: 10),
+                            child: Text(
+                              qrList[(qrList.length - (index + 1))],
+                              style: TextStyle(fontFamily: 'Poppins'),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  child: GestureDetector(
+                    child: Container(
+                      padding: EdgeInsets.all(10),
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF42A5F5),
+                      ),
+                      child: Text(
+                        qrStatus
+                            ? "VER HISTORIAL DE ESCANEOS"
+                            : "ABRIR LECTOR QR",
+                        style: TextStyle(
+                            fontFamily: 'Poppins', color: Colors.white),
+                      ),
+                    ),
+                    onTap: () => goToQRScan(),
+                  ),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: Text('Scan result: $qrText'),
-            ),
-          )
-      ],),
-    );
+        ),
+        onWillPop: () => changePage());
   }
+
+  changePage() {
+    if (qrStatus) {
+      setState(() {
+        qrStatus = false;
+      });
+    }
+  }
+
+  goToQRScan() {
+    if (qrStatus) {
+      setState(() {
+        qrStatus = false;
+      });
+    } else {
+      setState(() {
+        qrStatus = true;
+      });
+    }
+  }
+
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
-  
-      controller.scannedDataStream.listen((scanData) {
-      setState(() {
-        qrText = scanData;
-      });
+    var count = 0;
+    controller.scannedDataStream.listen((scanData) {
+      if (count == 0) {
+        setState(() {
+          count++;
+          saveList(scanData);
+          qrStatus = false;
+        });
+      }
     });
   }
+
+  saveList(text) async {
+    qrList.add(text);
+    if(qrList.length < 11){
+    pref.setStringList("qr_app_key", qrList);
+    }else{
+      qrList.removeAt(0);
+      pref.setStringList("qr_app_key", qrList);
+    }
+  }
+
+  List<String> getList() {
+    return pref.getStringList("qr_app_key");
+  }
+
   @override
   void dispose() {
     controller?.dispose();
