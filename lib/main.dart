@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(MyApp());
@@ -76,12 +79,37 @@ class _MyHomePageState extends State<MyHomePage> {
                                     bottom: BorderSide(
                                         color:
                                             Color.fromRGBO(236, 236, 236, 1)))),
-                            padding:
-                                EdgeInsets.only(left: 5, right: 5, top: index == 0? 0: 10, bottom: 10),
-                            child: Text(
-                              qrList[(qrList.length - (index + 1))],
-                              style: TextStyle(fontFamily: 'Poppins'),
-                            ),
+                            padding: EdgeInsets.only(
+                                left: 5,
+                                right: 5,
+                                top: index == 0 ? 0 : 10,
+                                bottom: 10),
+                            child: testIfIsAlink(
+                                    qrList[(qrList.length - (index + 1))])
+                                ? GestureDetector(
+                                    child: Text(
+                                      qrList[(qrList.length - (index + 1))],
+                                      style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Color(0xFF42A5F5)),
+                                    ),
+                                    onTap: () => {
+                                      _launchURL(qrList[
+                                          (qrList.length - (index + 1))]),
+                                      copyText(
+                                          qrList[(qrList.length - (index + 1))])
+                                    },
+                                  )
+                                : GestureDetector(
+                                    child: Text(
+                                      qrList[(qrList.length - (index + 1))],
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                    onTap: () => copyText(
+                                        qrList[(qrList.length - (index + 1))]),
+                                  ),
                           );
                         },
                       ),
@@ -113,6 +141,12 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         onWillPop: () => changePage());
+  }
+
+  testIfIsAlink(text) {
+    bool url = Uri.parse(text).isAbsolute;
+
+    return url ? true : false;
   }
 
   changePage() {
@@ -151,16 +185,42 @@ class _MyHomePageState extends State<MyHomePage> {
 
   saveList(text) async {
     qrList.add(text);
-    if(qrList.length < 11){
-    pref.setStringList("qr_app_key", qrList);
-    }else{
+    if (qrList.length < 11) {
+      pref.setStringList("qr_app_key", qrList);
+    } else {
       qrList.removeAt(0);
       pref.setStringList("qr_app_key", qrList);
+    }
+
+    bool isUrl = testIfIsAlink(text);
+
+    if (isUrl) {
+      await _launchURL(text);
     }
   }
 
   List<String> getList() {
     return pref.getStringList("qr_app_key");
+  }
+
+  _launchURL(url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+  copyText(text) {
+    Clipboard.setData(ClipboardData(text: text));
+    Fluttertoast.showToast(
+        msg: "Copiado!",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color(0xFF42A5F5),
+        textColor: Colors.white,
+        fontSize: 14.0);
   }
 
   @override
