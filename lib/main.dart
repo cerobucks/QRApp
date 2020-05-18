@@ -54,8 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return new WillPopScope(
-        child: Scaffold(
+    return new Scaffold(
           body: Column(
             children: <Widget>[
               Expanded(
@@ -63,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Image.asset('assets/banner.jpg', fit: BoxFit.fill),
               ),
               Expanded(
-                flex: 5,
+                flex: 3,
                 child: qrStatus
                     ? QRView(
                         key: qrKey,
@@ -117,7 +116,7 @@ class _MyHomePageState extends State<MyHomePage> {
               Expanded(
                 flex: 1,
                 child: Container(
-                  padding: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(22),
                   child: GestureDetector(
                     child: Container(
                       padding: EdgeInsets.all(10),
@@ -139,8 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
-        ),
-        onWillPop: () => changePage());
+        );
   }
 
   testIfIsAlink(text) {
@@ -149,13 +147,6 @@ class _MyHomePageState extends State<MyHomePage> {
     return url ? true : false;
   }
 
-  changePage() {
-    if (qrStatus) {
-      setState(() {
-        qrStatus = false;
-      });
-    }
-  }
 
   goToQRScan() {
     if (qrStatus) {
